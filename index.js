@@ -1,17 +1,27 @@
 const CARD_ICONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+const STORAGE_KEY = 'rs_memory_game_settings';
 
-function createElement(tag, props = {}, ...children) {
+// алгоритм тасования, чтобы не было повторов и порядок был случайным
+const shuffleArray = (array) => {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+};
+
+const createElement = (tag, props = {}, ...children) => {
   const element = document.createElement(tag);
 
   Object.entries(props).forEach(([key, value]) => {
     if (key.startsWith('on') && typeof value === 'function') {
-      const eventName = key.slice(2).toLowerCase();
-      element.addEventListener(eventName, value);
+      element.addEventListener(key.slice(2).toLowerCase(), value);
     } else if (key === 'className') {
       element.className = value;
     } else if (key === 'dataset') {
-      Object.entries(value).forEach(([dataKey, dataVal]) => {
-        element.dataset[dataKey] = dataVal;
+      Object.entries(value).forEach(([k, v]) => {
+        element.dataset[k] = v;
       });
     } else {
       element.setAttribute(key, value);
@@ -27,62 +37,4 @@ function createElement(tag, props = {}, ...children) {
   });
 
   return element;
-}
-
-class ModalManager {
-  static createModal({ titleText, bodyElement, buttons = [] }) {
-    const dialog = createElement('dialog', { className: 'dialog' });
-
-    const closeDialog = () => {
-      dialog.close();
-      dialog.remove();
-      document.body.style.overflow = '';
-    };
-
-    const header = createElement('div', { className: 'modal__header' },
-      createElement('h3', { className: 'modal__title' }, titleText)
-    );
-
-    const body = createElement('div', { className: 'modal__body' }, bodyElement);
-
-    const footerButtons = buttons.map(btn => {
-      const b = createElement('button', {
-        className: `btn ${btn.primary ? 'btn--primary' : 'btn--secondary'}`,
-        onClick: (e) => {
-          btn.onClick(e, closeDialog);
-        }
-      }, btn.text);
-      return b;
-    });
-
-    const footer = createElement('div', { className: 'modal__footer' }, ...footerButtons);
-
-    const modalContainer = createElement('div', { className: 'modal' }, header, body, footer);
-    dialog.appendChild(modalContainer);
-
-    // Close on overlay click
-    dialog.addEventListener('click', (e) => {
-      const rect = dialog.getBoundingClientRect();
-      const isInDialog = (
-        rect.top <= e.clientY &&
-        e.clientY <= rect.top + rect.height &&
-        rect.left <= e.clientX &&
-        e.clientX <= rect.left + rect.width
-      );
-      if (!isInDialog) {
-        closeDialog();
-      }
-    });
-
-    // Handle Escape key naturally
-    dialog.addEventListener('close', () => {
-      closeDialog();
-    });
-
-    document.body.appendChild(dialog);
-    document.body.style.overflow = 'hidden';
-    dialog.showModal();
-
-    return closeDialog;
-  }
-}
+};
