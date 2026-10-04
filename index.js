@@ -1,7 +1,8 @@
 const CARD_ICONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
 const STORAGE_KEY = 'rs_memory_game_state';
+const LEADERBOARD_KEY = 'rs_memory_game_leaderboard';
 
-// функция создания DOM-элементов
+// создания DOM-элементов
 function createElement(tag, props = {}, ...children) {
   const element = document.createElement(tag);
 
@@ -68,6 +69,154 @@ function resetTimer() {
   timeValue.textContent = '00:00';
 }
 
+// Работа с Таблицей Лидеров (localStorage)
+function getLeaderboard() {
+  const data = localStorage.getItem(LEADERBOARD_KEY);
+  return data ? JSON.parse(data) : [];
+}
+
+function saveLeaderboardResult(name, timeInSeconds, movesCount) {
+  const leaderboard = getLeaderboard();
+  leaderboard.push({
+    name: name || 'Игрок',
+    time: timeInSeconds,
+    moves: movesCount,
+    date: new Date().toLocaleDateString()
+  });
+
+  // Сортировка: сначала по наименьшему времени, затем по наименьшим ходам
+  leaderboard.sort((a, b) => a.time - b.time || a.moves - b.moves);
+
+  // Храним только топ-10 результатов
+  const top10 = leaderboard.slice(0, 10);
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(top10));
+  
+  renderLeaderboardTable();
+}
+
+// Oтрисовка таблицы лидеров в блоке на странице
+function renderLeaderboardTable() {
+  const leaderboardContainer = document.querySelector('.leaderBoard');
+  if (!leaderboardContainer) return;
+
+  leaderboardContainer.innerHTML = '';
+  
+  const title = createElement('h3', { className: 'leaderBoard__title' }, '🏆 Таблица лидеров');
+  const table = createElement('table', { className: 'leaderBoard__table' });
+  const tbody = createElement('tbody', { className: 'leaderBoard__tbody' });
+
+  const headerRow = createElement('tr', { className: 'leaderBoard__tr' },
+    createElement('th', { className: 'leaderBoard__th' }, '№'),
+    createElement('th', { className: 'leaderBoard__th' }, 'Имя'),
+    createElement('th', { className: 'leaderBoard__th' }, 'Время'),
+    createElement('th', { className: 'leaderBoard__th' }, 'Ходы')
+  );
+  tbody.appendChild(headerRow);
+
+  const leaderboard = getLeaderboard();
+
+  if (leaderboard.length === 0) {
+    const emptyRow = createElement('tr', {},
+      createElement('td', { colSpan: '4', className: 'leaderBoard__td--empty' }, 'Рекордов пока нет')
+    );
+    tbody.appendChild(emptyRow);
+  } else {
+    leaderboard.forEach((item, index) => {
+      const row = createElement('tr', { className: 'leaderBoard__tr' },
+        createElement('td', { className: 'leaderBoard__td' }, String(index + 1)),
+        createElement('td', { className: 'leaderBoard__td' }, item.name),
+        createElement('td', { className: 'leaderBoard__td' }, formatTime(item.time)),
+        createElement('td', { className: 'leaderBoard__td' }, String(item.moves))
+      );
+      tbody.appendChild(row);
+    });
+  }
+
+  table.appendChild(tbody);
+  leaderboardContainer.appendChild(title);
+  leaderboardContainer.appendChild(table);
+}
+
+// Модальные окна
+function showVictoryModal() {
+  const modal = createElement('div', { className: 'modal' });
+  const modalContent = createElement('div', { className: 'modal__content' });
+
+  const title = createElement('h2', { className: 'modal__title' }, '🎉 Поздравляем! Вы победили!');
+  const statsText = createElement('p', { className: 'modal__stats' }, 
+    `Ваш результат: Время — ${formatTime(secondsElapsed)}, Ходов — ${moves}`
+  );
+
+  const nameInput = createElement('input', {
+    type: 'text',
+    className: 'modal__input',
+    placeholder: 'Введите ваше имя',
+    maxLength: '15'
+  });
+
+  const saveBtn = createElement('button', { className: 'btn btn--primary' }, 'Сохранить рекорд');
+  
+  saveBtn.addEventListener('click', () => {
+    const playerName = nameInput.value.trim() || 'Игрок';
+    saveLeaderboardResult(playerName, secondsElapsed, moves);
+    modal.remove();
+  });
+
+  const closeButton = createElement('button', { className: 'modal__close' }, '✕');
+  closeButton.addEventListener('click', () => modal.remove());
+
+  modalContent.appendChild(closeButton);
+  modalContent.appendChild(title);
+  modalContent.appendChild(statsText);
+  modalContent.appendChild(nameInput);
+  modalContent.appendChild(saveBtn);
+
+  modal.appendChild(modalContent);
+  document.body.appendChild(modal);
+}
+
+function showLeaderBoardModal() {
+  const modal = createElement('div', { className: 'modal' });
+  const modalContent = createElement('div', { className: 'modal__content' });
+  const modalTitle = createElement('h2', { className: 'modal__title' }, 'Таблица лидеров');
+
+  const leaderboardTable = createElement('div', { className: 'modal__leaderboard' });
+  
+  const closeButton = createElement('button', { className: 'modal__close' }, '✕');
+  closeButton.addEventListener('click', () => modal.remove());
+
+  modalContent.appendChild(closeButton);
+  modalContent.appendChild(modalTitle);
+  modalContent.appendChild(leaderboardTable);
+  modal.appendChild(modalContent);
+
+  document.body.appendChild(modal);
+
+  // Отрисовка таблицы внутри модального окна
+  const leaderboard = getLeaderboard();
+  const table = createElement('table', { className: 'leaderBoard__table' });
+  const tbody = createElement('tbody', { className: 'leaderBoard__tbody' });
+
+  tbody.appendChild(createElement('tr', {},
+    createElement('th', {}, '№'),
+    createElement('th', {}, 'Имя'),
+    createElement('th', {}, 'Время'),
+    createElement('th', {}, 'Ходы')
+  ));
+
+  leaderboard.forEach((item, index) => {
+    tbody.appendChild(createElement('tr', {},
+      createElement('td', {}, String(index + 1)),
+      createElement('td', {}, item.name),
+      createElement('td', {}, formatTime(item.time)),
+      createElement('td', {}, String(item.moves))
+    ));
+  });
+
+  table.appendChild(tbody);
+  leaderboardTable.appendChild(table);
+}
+
 // Обработчик клика по карточке
 function handleCardClick(index) {
   const card = cards[index];
@@ -81,7 +230,6 @@ function handleCardClick(index) {
     return;
   }
 
-  // Запуск таймера при первом ходе
   startTimer();
 
   card.isFlipped = true;
@@ -110,7 +258,7 @@ function handleCardClick(index) {
     if (matchedPairs === CARD_ICONS.length) {
       stopTimer();
       setTimeout(() => {
-        alert(`Победа! Время: ${formatTime(secondsElapsed)}, Ходов: ${moves}`);
+        showVictoryModal();
       }, 300);
     }
   } else {
@@ -129,7 +277,7 @@ function handleCardClick(index) {
   }
 }
 
-// создания игрового поля
+// Создание игрового поля
 function createBoard(iconsData, onCardClick) {
   const board = createElement('div', { className: 'board' });
   const localCards = [];
@@ -163,15 +311,15 @@ function createBoard(iconsData, onCardClick) {
   return { boardElement: board, cards: localCards };
 }
 
-// Элементы UI
+//  Элементы
 const title = createElement('h1', { className: 'header__title' }, 'Memory Game');
 const newGameBtn = createElement('button', { className: 'btn btn--primary' }, 'Новая игра');
 const resetProgressBtn = createElement('button', { className: 'btn btn--secondary' }, 'Сбросить прогресс');
+const leaderboardBtn = createElement('button', { className: 'btn btn--info', onClick: showLeaderBoardModal }, '🏆 Лидеры');
 
-const headerControls = createElement('div', { className: 'header__controls' }, newGameBtn, resetProgressBtn);
+const headerControls = createElement('div', { className: 'header__controls' }, newGameBtn, resetProgressBtn, leaderboardBtn);
 const header = createElement('header', { className: 'header' }, title, headerControls);
 
-// Статистика (Ходы, Найдено пар, Время)
 const movesValue = createElement('span', { className: 'stats__value' }, '0');
 const movesBlock = createElement('div', { className: 'stats__item' }, 'Ходы: ', movesValue);
 
@@ -183,7 +331,6 @@ const timeBlock = createElement('div', { className: 'stats__item' }, 'Время
 
 const stats = createElement('div', { className: 'stats' }, movesBlock, pairsBlock, timeBlock);
 
-// Функция полной перезагрузки/пересоздания игры
 function startNewGame() {
   resetTimer();
   moves = 0;
@@ -194,7 +341,6 @@ function startNewGame() {
   movesValue.textContent = '0';
   pairsValue.textContent = `0 / ${CARD_ICONS.length}`;
 
-  // Перетасовываем новые иконки
   const shuffledIcons = [...CARD_ICONS, ...CARD_ICONS].sort(() => Math.random() - 0.5);
   
   const boardData = createBoard(shuffledIcons, handleCardClick);
@@ -208,7 +354,6 @@ function startNewGame() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// Сохранение и Загрузка из localStorage
 function saveGameState() {
   const state = {
     moves,
@@ -241,7 +386,6 @@ function loadGameState() {
     const boardData = createBoard(iconsData, handleCardClick);
     cards = boardData.cards;
 
-    // Восстанавливаем состояние переворотов
     state.cards.forEach((savedCard, idx) => {
       cards[idx].isFlipped = savedCard.isFlipped;
       cards[idx].isMatched = savedCard.isMatched;
@@ -256,7 +400,7 @@ function loadGameState() {
   }
 }
 
-// Инициализация и обработчики
+
 document.addEventListener('DOMContentLoaded', () => {
   const restoredBoard = loadGameState();
   
@@ -270,10 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
     boardElement = boardData.boardElement;
   }
 
-  const mainContainer = createElement('main', { className: 'main-container' }, stats, boardElement);
+  const leaderBoardBlock = createElement('div', { className: 'leaderBoard' });
+
+  const mainContainer = createElement('main', { className: 'main-container' }, stats, boardElement, leaderBoardBlock);
 
   document.body.appendChild(header);
   document.body.appendChild(mainContainer);
+
+  renderLeaderboardTable();
 });
 
 newGameBtn.addEventListener('click', startNewGame);
@@ -284,12 +432,9 @@ resetProgressBtn.addEventListener('click', () => {
 });
 
 window.addEventListener('beforeunload', () => {
-  // Сохраняем только если игра в процессе и не выиграна
   if (matchedPairs < CARD_ICONS.length && moves > 0) {
     saveGameState();
   } else {
     localStorage.removeItem(STORAGE_KEY);
   }
 });
-
-// добавляем 

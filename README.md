@@ -2,7 +2,7 @@
 
 Интерактивная браузерная игра на запоминание карточек (Memory Pair Matching Game), написанная на чистом JavaScript (Vanilla JS), HTML5 и CSS3.
 
-![Memory Game Preview](![alt text](image.png))
+![alt text](image.png)
 
 ---
 
@@ -12,7 +12,7 @@
 - ⏱️ **Статистика в реальном времени**:
   - Подсчёт количества сделанных ходов.
   - Счетчик найденных пар ($0 / 8$).
-  - Секундомер, отслеживающий время прохождения игры (запускается с первым кликом).
+  - Секундомер, отслеживающий время прохождения игры (**запускается с первым кликом**).
 - 💾 **Сохранение прогресса**: Состояние игры и текущие карточки сохраняются в `localStorage`, что позволяет продолжить игру после перезагрузки страницы.
 - 🔄 **Управление игрой**:
   - Кнопка **«Новая игра»** для быстрого перезапуска с новым расположением элементов.
@@ -40,6 +40,7 @@
 ### Способ 1. Простой запуск через браузер
 
 1. **Клонируйте репозиторий** на свой ПК:
+   git clone [https://github.com/Igogoblin/memory-game/tree/memory-game]
    ```bash
-   git clone [https://github.com/Igogoblin/memory-game/tree/memory-game](https://github.com/Igogoblin/memory-game/tree/memory-game)
+   https://github.com/Igogoblin/memory-game/tree/memory-game
    ```
