@@ -1,8 +1,7 @@
-// Константы (объявляем ОДИН раз)
 const CARD_ICONS = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
-const STORAGE_KEY = 'rs_memory_game_settings';
+const STORAGE_KEY = 'rs_memory_game_state';
 
-// Вспомогательная функция создания DOM-элементов
+// функция создания DOM-элементов
 function createElement(tag, props = {}, ...children) {
   const element = document.createElement(tag);
 
@@ -36,9 +35,40 @@ let moves = 0;
 let matchedPairs = 0;
 let flippedCards = [];
 let isBoardLocked = false;
-let cards = []; // Глобальный массив текущих карточек
+let cards = [];
 
-// Обработчик клика по карточке (объявляем ДО вызова createBoard)
+// Таймер
+let timerInterval = null;
+let secondsElapsed = 0;
+let isTimerStarted = false;
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function startTimer() {
+  if (isTimerStarted) return;
+  isTimerStarted = true;
+  timerInterval = setInterval(() => {
+    secondsElapsed++;
+    timeValue.textContent = formatTime(secondsElapsed);
+  }, 1000);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  isTimerStarted = false;
+}
+
+function resetTimer() {
+  stopTimer();
+  secondsElapsed = 0;
+  timeValue.textContent = '00:00';
+}
+
+// Обработчик клика по карточке
 function handleCardClick(index) {
   const card = cards[index];
 
@@ -51,20 +81,20 @@ function handleCardClick(index) {
     return;
   }
 
-  // Переворачиваем карточку
+  // Запуск таймера при первом ходе
+  startTimer();
+
   card.isFlipped = true;
   card.element.classList.add('card--flipped');
   flippedCards.push(card);
 
   if (flippedCards.length < 2) return;
 
-  // Если открыты 2 карточки — считаем ход
   moves++;
   movesValue.textContent = String(moves);
 
   const [firstCard, secondCard] = flippedCards;
 
-  // Проверяем совпадение
   if (firstCard.icon === secondCard.icon) {
     firstCard.isMatched = true;
     secondCard.isMatched = true;
@@ -78,7 +108,10 @@ function handleCardClick(index) {
     flippedCards = [];
 
     if (matchedPairs === CARD_ICONS.length) {
-      setTimeout(() => alert(`Победа! Вы нашли все пары за ${moves} ходов.`), 300);
+      stopTimer();
+      setTimeout(() => {
+        alert(`Победа! Время: ${formatTime(secondsElapsed)}, Ходов: ${moves}`);
+      }, 300);
     }
   } else {
     isBoardLocked = true;
@@ -96,15 +129,13 @@ function handleCardClick(index) {
   }
 }
 
-// Функция создания игрового поля
-function createBoard(icons, onCardClick) {
-  const cardsData = [...icons, ...icons].sort(() => Math.random() - 0.5);
-
+// создания игрового поля
+function createBoard(iconsData, onCardClick) {
   const board = createElement('div', { className: 'board' });
   const localCards = [];
 
-  for (let i = 0; i < cardsData.length; i++) {
-    const icon = cardsData[i];
+  for (let i = 0; i < iconsData.length; i++) {
+    const icon = iconsData[i];
 
     const card = createElement('button', {
       className: 'card',
@@ -132,30 +163,133 @@ function createBoard(icons, onCardClick) {
   return { boardElement: board, cards: localCards };
 }
 
-// Хедер и элементы UI
+// Элементы UI
 const title = createElement('h1', { className: 'header__title' }, 'Memory Game');
-const newGameBtn = createElement('button', { className: 'btn btn--primary', 'aria-label': 'Новая игра' }, 'Новая игра');
-const leaderboardBtn = createElement('button', { className: 'btn btn--secondary', 'aria-label': 'Таблица лидеров' }, 'Таблица лидеров');
+const newGameBtn = createElement('button', { className: 'btn btn--primary' }, 'Новая игра');
+const resetProgressBtn = createElement('button', { className: 'btn btn--secondary' }, 'Сбросить прогресс');
 
-const headerControls = createElement('div', { className: 'header__controls' }, newGameBtn, leaderboardBtn);
+const headerControls = createElement('div', { className: 'header__controls' }, newGameBtn, resetProgressBtn);
 const header = createElement('header', { className: 'header' }, title, headerControls);
 
-// Статистика
+// Статистика (Ходы, Найдено пар, Время)
 const movesValue = createElement('span', { className: 'stats__value' }, '0');
 const movesBlock = createElement('div', { className: 'stats__item' }, 'Ходы: ', movesValue);
 
-const pairsValue = createElement('span', { className: 'stats__value' }, '0 / 8');
+const pairsValue = createElement('span', { className: 'stats__value' }, `0 / ${CARD_ICONS.length}`);
 const pairsBlock = createElement('div', { className: 'stats__item' }, 'Найдено пар: ', pairsValue);
 
-const stats = createElement('div', { className: 'stats' }, movesBlock, pairsBlock);
+const timeValue = createElement('span', { className: 'stats__value' }, '00:00');
+const timeBlock = createElement('div', { className: 'stats__item' }, 'Время: ', timeValue);
 
-// Создание поля и монтирование ТОЛЬКО внутри DOMContentLoaded
+const stats = createElement('div', { className: 'stats' }, movesBlock, pairsBlock, timeBlock);
+
+// Функция полной перезагрузки/пересоздания игры
+function startNewGame() {
+  resetTimer();
+  moves = 0;
+  matchedPairs = 0;
+  flippedCards = [];
+  isBoardLocked = false;
+
+  movesValue.textContent = '0';
+  pairsValue.textContent = `0 / ${CARD_ICONS.length}`;
+
+  // Перетасовываем новые иконки
+  const shuffledIcons = [...CARD_ICONS, ...CARD_ICONS].sort(() => Math.random() - 0.5);
+  
+  const boardData = createBoard(shuffledIcons, handleCardClick);
+  cards = boardData.cards;
+
+  const oldBoard = document.querySelector('.board');
+  if (oldBoard) {
+    oldBoard.replaceWith(boardData.boardElement);
+  }
+
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// Сохранение и Загрузка из localStorage
+function saveGameState() {
+  const state = {
+    moves,
+    matchedPairs,
+    secondsElapsed,
+    cards: cards.map(c => ({
+      icon: c.icon,
+      isFlipped: c.isFlipped,
+      isMatched: c.isMatched
+    }))
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function loadGameState() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (!saved) return false;
+
+  try {
+    const state = JSON.parse(saved);
+    moves = state.moves || 0;
+    matchedPairs = state.matchedPairs || 0;
+    secondsElapsed = state.secondsElapsed || 0;
+
+    movesValue.textContent = String(moves);
+    pairsValue.textContent = `${matchedPairs} / ${CARD_ICONS.length}`;
+    timeValue.textContent = formatTime(secondsElapsed);
+
+    const iconsData = state.cards.map(c => c.icon);
+    const boardData = createBoard(iconsData, handleCardClick);
+    cards = boardData.cards;
+
+    // Восстанавливаем состояние переворотов
+    state.cards.forEach((savedCard, idx) => {
+      cards[idx].isFlipped = savedCard.isFlipped;
+      cards[idx].isMatched = savedCard.isMatched;
+
+      if (savedCard.isFlipped) cards[idx].element.classList.add('card--flipped');
+      if (savedCard.isMatched) cards[idx].element.classList.add('card--matched');
+    });
+
+    return boardData.boardElement;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Инициализация и обработчики
 document.addEventListener('DOMContentLoaded', () => {
-  const boardData = createBoard(CARD_ICONS, handleCardClick);
-  cards = boardData.cards; // Записываем созданные карточки в глобальную переменную
+  const restoredBoard = loadGameState();
+  
+  let boardElement;
+  if (restoredBoard) {
+    boardElement = restoredBoard;
+  } else {
+    const initialIcons = [...CARD_ICONS, ...CARD_ICONS].sort(() => Math.random() - 0.5);
+    const boardData = createBoard(initialIcons, handleCardClick);
+    cards = boardData.cards;
+    boardElement = boardData.boardElement;
+  }
 
-  const mainContainer = createElement('main', { className: 'main-container' }, stats, boardData.boardElement);
+  const mainContainer = createElement('main', { className: 'main-container' }, stats, boardElement);
 
   document.body.appendChild(header);
   document.body.appendChild(mainContainer);
 });
+
+newGameBtn.addEventListener('click', startNewGame);
+
+resetProgressBtn.addEventListener('click', () => {
+  localStorage.removeItem(STORAGE_KEY);
+  startNewGame();
+});
+
+window.addEventListener('beforeunload', () => {
+  // Сохраняем только если игра в процессе и не выиграна
+  if (matchedPairs < CARD_ICONS.length && moves > 0) {
+    saveGameState();
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+});
+
+// добавляем 
