@@ -2,7 +2,7 @@
 
 Интерактивная браузерная игра на запоминание карточек (Memory Pair Matching Game), написанная на чистом JavaScript (Vanilla JS), HTML5 и CSS3.
 
-![Memory Game Preview](https://via.placeholder.com/800x450.png?text=Memory+Game+Preview) <!-- Добавьте сюда скриншот вашей игры -->
+![Memory Game Preview](![alt text](image.png))
 
 ---
 
