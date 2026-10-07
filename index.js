@@ -99,7 +99,7 @@ function renderLeaderboardTable() {
   const leaderboardContainer = document.querySelector('.leaderBoard');
   if (!leaderboardContainer) return;
 
-  leaderboardContainer.innerHTML = '';
+  leaderboardContainer.replaceChildren();
   
   const title = createElement('h3', { className: 'leaderBoard__title' }, '🏆 Таблица лидеров');
   const table = createElement('table', { className: 'leaderBoard__table' });
